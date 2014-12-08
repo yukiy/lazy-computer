@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style type="text/css">
+    #repl {
+        border: solid 2px black;
+        background-color: grey;
+        color: white;
+        padding: 5px;
+
+        display:inline-table;
+        width:98%;
+    }
+
+</style>
+
+<script src="js/jquery.js"></script>
+<script src="js/jqconsole.js"></script>
+<script src="js/sugar.js"></script>
+<script src="js/peg.js"></script>
+<script src="js/plt.js"></script>
+
+<script type="text/javascript">
+  // uncomment next line to enable refresh
+  // PLT.refresh = true
+
+  // write helper functions and semantics here
+
+    var lang = {
+        isFormal : false,
+
+        isIgnore : false,
+
+        isGoogle : false,
+
+        run: function(obj){
+            if(this.ignore() && !this.isFormal){
+                return "...sorry say again?"
+            }else{
+                var func = obj.func;
+                var a = obj.a;
+                var b = obj.b;
+                if(func == "sum" || func == "add"){
+                    return this.sum(a, b);
+                }else if(func == "count"){
+                    return this.count(a, b);
+                }else if(func == "print"){
+                    return this.print(a);
+                }else {
+                    return this.google();
+                }
+            }
+        },
+
+        ignore : function(){
+            if(Math.random() > 0.75){
+                this.isIgnore = true;
+                return true;
+            }
+            this.isIgnore = false;
+            return false;
+        },
+
+        google : function(){
+            if(this.isFormal){
+                return "Sorry I don't know what you mean.."
+            }else{
+                return "http://google.com/";
+            }
+        },
+
+        countDigit : function (num){
+                var str = num.toString();
+                return str.length;
+        },
+
+        sum : function(a,b){
+            var sum;
+            a = parseInt(a);
+            b = parseInt(b);
+            if(a > 10 && b > 10 && !this.isFormal){
+                var scaleA = this.countDigit(a);
+                a = Math.round(a / Math.pow(10,(scaleA-2)));
+                a *= Math.pow(10,(scaleA-2));
+                var scaleB = this.countDigit(b);
+                b = Math.round(b / Math.pow(10,(scaleB-2)));
+                b *= Math.pow(10,(scaleB-2));
+            }
+            sum = a + b;
+            return sum;
+        },
+
+        count : function(a,b){
+            var count = "";
+            for(var i = a; i<=b; i++){
+                count += i;
+                if(i != b){
+                  count += ", ";
+                }
+
+                if(count.length > 30 && !this.isFormal){
+                    count += "and so on..."
+                    break;
+                }
+            }
+            return count;
+        },
+
+        print : function(a){
+            if(!this.isFormal){
+                if(a.match(/hello|Hello|HELLO/).length > 0){
+                    a = a.replace(/hello/gi, 'hi');
+                    // a = a.replace('Hello', 'Hi');
+                    // a = a.replace('HELLO', 'HI');
+                }
+            }
+            return a;
+        }
+
+    }
+
+</script>
+</head>
+<body>
+
+<!--
+
+PEG syntax quick reference
+
+'x'   : match the literal character 'x'
+x+    : match x 1 or more times
+x*    : match x 0 or more times
+x?    : match x 0 or 1 times
+!x    : match anything but the match x
+x/y   : match x or y, trying in that order
+[xyz] : match one of the literal character 'x', 'y', or 'z'
+v:x   : assign the result of the match x to the variable v
+
+Full documentation: http://pegjs.majda.cz/documentation#grammar-syntax-and-semantics-parsing-expression-types
+
+-->
+<!--comment out
+
+    start = '(' '+' space a:(start / number) ' ' b:(start / number) space ')' { return a + b }
+    action = myName:token space myAttributes:token* space myTarget:token?
+    { return { name: myName, attributes: myAttributes, target: myTarget.token } }
+
+-->
+
+<!--
+    action =    (formal / casual) space
+                f:(count / sum / print / [a-z]+) space
+                a:(start / number) space
+                c:(to / and ) space
+                b:(number*) space
+                question space
+                { return lang.run({func: f, a:a, b:b}) }
+
+-->
+
+
+<grammar>
+    start = action
+
+    action =    (formal / casual) space
+                data:(count / add / print / unknown) space
+                { return lang.run(data) }
+
+    space = ' '*
+    question = '?'*
+
+    number = d:digit+ space { return parseInt( d.join('') ) }
+    digit = [0123456789]
+
+    string = '"' s:[^"]* '"' space { return s.join("") }
+
+    casual = ('hey' / 'yo' / 'hi') {lang.isFormal = false;}
+    formal = ('would you mind if I ask you to' / 'could you please' / 'may I ask you to') {lang.isFormal = true;}
+
+    unknown = [a-zA-Z0-9'"?! ]+
+
+    add =   ('add' / 'sum') space
+            a:number space
+            'and' space
+            b:number space
+            question space
+            { return {func:'add', a:a, b:b} }
+
+    count = 'count' space
+            a:number space
+            'to' space
+            b:number space
+            question space
+            { return {func:'count', a:a, b:b} }
+
+    print = 'print' space
+            a:string space
+            question space
+            {return {func:'print', a:a}}
+
+
+</grammar>
+
+<title>Lazy Computer</title>
+
+<h3>*Please be respectful for a computer.</h3>
+
+<br/>
+<hr/>
+<h4>Basic syntax:</h4>
+
+<b><span style="color:red;">ASK</span> <span style="color:green;">DO</span> <span style="color:blue;">WHAT</span> ? </b><br/>
+
+<br/>
+<hr/>
+
+<h4 style="color:red;">ASK:</h4>
+
+<p>If you casually ask, a computer returns casual value.<br/>
+It's quicker way but be careful the use of casual returns because it's not so precise.<br/>
+If you need to get an accurate value, use more formal way of asking.
+</p>
+
+<div style="font-style:italic;">Casual ask</div>
+<li>hi</li>
+<li>hey</li>
+<li>yo</li>
+
+<br/>
+
+<div style="font-style:italic;">Formal ask</div>
+<li>would you mind if I ask you to</li>
+<li>could you please</li>
+<li>may I ask you to</li>
+
+<br/>
+<hr/>
+
+<h4 style="color:green;">DO</span> <span style="color:blue;">WHAT</span>:</h4>
+<p>Currently only three DOs are active.</p>
+<li><span style="color:green;">count</span> <span style="color:blue;">a</span> <span style="color:green;">to</span> <span style="color:blue;">b</span></li>
+*Try to keep within 10 numbers if you want to casually ask.<br/>
+<br/>
+<li><span style="color:green;">add</span> <span style="color:blue;">a</span> <span style="color:green;">and</span> <span style="color:blue;">b</span></li>
+*Do not ask too complicated numbers if you want to casually ask.<br/>
+<br/>
+<li><span style="color:green;">print</span> <span style="color:blue;">"a"</span></li>
+
+
+<br/>
+<hr/>
+
+<h4><span>?</span>:</h4>
+'?' at the end of your asking to distinguish with your monology. Prefered but optional.
+
+<br/>
+<br/>
+<hr/>
+
+
+<h4 style="">Important notes</span>:</h4>
+<li>A lazy computer sometime didn't listen what you casually ask. In case, just say again or use formal ask.</li>
+<li>You may want to ask to do more thing. Actually you can still ask but don't expect too much from a lazy computer.</li>
+
+<br/>
+<hr/>
+
+
+
+<h4>Ask examples</h4>
+
+<pre>hey count 5 to 10?</pre>
+<pre>hi count 7 to 50?</pre>
+<pre>would you mind if I ask you to count 7 to 50?</pre>
+
+<pre>yo add 7123 and 4328?</pre>
+<pre>could you please add 7123 and 4328?</pre>
+
+<pre>hey print "hello world"?</pre>
+<pre>may I ask you to print "hello world"?</pre>
+
+<!--
+<code>hey count 5 to 10?</code>
+<code>hi count 7 to 50?</code>
+<code>would you mind if I ask you to count 7 to 50?</code>
+
+<code>yo add 7123 and 4328?</code>
+<code>could you please add 7123 and 4328?</code>
+
+<code>hey print "hello world"?</code>
+<code>may I ask you to print "hello world"?</code>
+-->
+
+<br/>
+<hr/>
+<h4>Try it!</h4>
+
+
+</body>
+</html>
